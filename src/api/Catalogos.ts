@@ -1,5 +1,5 @@
-import { api } from "./axios";
-import type { Catalogo } from "../types/Catalogo";
+import api from "./axios";
+import type { Catalogo, SedeCompleta } from "../types/Catalogo";
 
 export const getServicios = async (): Promise<Catalogo[]> => {
   const response = await api.get("/servicios");
@@ -16,7 +16,7 @@ export const getEstados = async (): Promise<Catalogo[]> => {
   return response.data;
 };
 
-export const getSedes = async (): Promise<Catalogo[]> => {
+export const getSedes = async (): Promise<SedeCompleta[]> => {
   const response = await api.get("/sedes");
   return response.data;
 };
