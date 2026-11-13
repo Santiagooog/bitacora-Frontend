@@ -15,6 +15,7 @@ export interface Caso {
   numeroCasoESolution?: string;
   estado: string;
   sban: string;
+  proyecto?: string;
   sede: string;
   descripcionFalla: string;
   responsable?: string | null;
@@ -30,4 +31,23 @@ export interface Caso {
   actualizadoPorId?: number;
   actualizadoPorNombre?: string;
   actualizadoPorApellido?: string;
+  fechaVencimiento?: string;
+  segundosAnsRestantes?: number;
+  categoriaFallaNombre?: string;
+  categoriaFallaId?: number | null;
+  categoriaSolucionNombre?: string;
+  categoriaSolucionId?: number | null;
+  equipo?: string;
+  modelo?: string;
+  serial?: string;
+  placa?: string;
+  activoId?: number;
+  activoSerial?: string;
+  activoPlaca?: string;
+  activoName?: string;
+  activoDeviceType?: string;
+  activoTipoServicio?: string;
+  canalEscalamiento?: string;
+  grupoEscalamiento?: string;
+  escaladoA?: string;
 }

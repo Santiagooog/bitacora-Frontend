@@ -6,14 +6,6 @@ export interface User {
   rol: string;
 }
 
-interface AuthContextType {
-  user: User | null;      // ✅
-  token: string | null;
-  login: (token: string, user: User) => void;
-  logout: () => void;     // ✅
-  isAuthenticated: boolean;
-}
-
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
