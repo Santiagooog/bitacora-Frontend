@@ -143,7 +143,96 @@ export const DashboardPage = () => {
   const casosRecientes = data?.casosRecientes || [];
   const [graficaExportando, setGraficaExportando] = useState<string | null>(null);
 
-  const exportarGraficaPng = (id: string, nombreArchivo: string) => {
+  const exportarEstadosPng = (nombreArchivo: string) => {
+    setGraficaExportando("grafica-estado");
+    try {
+      const escala = 2;
+      const ancho = 960;
+      const alto = 560;
+      const canvas = document.createElement("canvas");
+      canvas.width = ancho * escala;
+      canvas.height = alto * escala;
+      const contexto = canvas.getContext("2d");
+      if (!contexto) throw new Error("No se pudo crear el lienzo de exportación.");
+
+      contexto.scale(escala, escala);
+      contexto.fillStyle = "#ffffff";
+      contexto.fillRect(0, 0, ancho, alto);
+      contexto.fillStyle = "#0f172a";
+      contexto.font = "600 24px Arial, sans-serif";
+      contexto.fillText("Casos por estado", 48, 52);
+      contexto.fillStyle = "#64748b";
+      contexto.font = "14px Arial, sans-serif";
+      contexto.fillText("Distribución del resultado del filtro actual", 48, 78);
+
+      const total = dataPorEstado.reduce((suma, item) => suma + Number(item.valor || 0), 0);
+      const centroX = ancho / 2;
+      const centroY = 290;
+      const radioExterior = 142;
+      const radioInterior = 82;
+      let angulo = -Math.PI / 2;
+
+      dataPorEstado.forEach((item) => {
+        const valor = Number(item.valor || 0);
+        if (valor <= 0 || total <= 0) return;
+        const siguienteAngulo = angulo + (valor / total) * Math.PI * 2;
+        contexto.beginPath();
+        contexto.arc(centroX, centroY, radioExterior, angulo, siguienteAngulo);
+        contexto.arc(centroX, centroY, radioInterior, siguienteAngulo, angulo, true);
+        contexto.closePath();
+        contexto.fillStyle = coloresEstado[item.nombre.toUpperCase()] || "#94a3b8";
+        contexto.fill();
+        angulo = siguienteAngulo;
+      });
+
+      contexto.textAlign = "center";
+      contexto.fillStyle = "#64748b";
+      contexto.font = "14px Arial, sans-serif";
+      contexto.fillText("TOTAL", centroX, centroY - 8);
+      contexto.fillStyle = "#0f172a";
+      contexto.font = "700 30px Arial, sans-serif";
+      contexto.fillText(String(total), centroX, centroY + 30);
+      contexto.textAlign = "left";
+
+      const columnas = Math.min(3, Math.max(1, dataPorEstado.length));
+      const anchoColumna = (ancho - 96) / columnas;
+      dataPorEstado.forEach((item, indice) => {
+        const columna = indice % columnas;
+        const fila = Math.floor(indice / columnas);
+        const x = 48 + columna * anchoColumna;
+        const y = 490 + fila * 30;
+        contexto.fillStyle = coloresEstado[item.nombre.toUpperCase()] || "#94a3b8";
+        contexto.fillRect(x, y - 12, 12, 12);
+        contexto.fillStyle = "#334155";
+        contexto.font = "14px Arial, sans-serif";
+        contexto.fillText(`${item.nombre}: ${item.valor}`, x + 20, y);
+      });
+
+      canvas.toBlob((blob) => {
+        setGraficaExportando(null);
+        if (!blob) {
+          alert("No se pudo generar el archivo PNG.");
+          return;
+        }
+        const urlPng = URL.createObjectURL(blob);
+        const enlace = document.createElement("a");
+        enlace.href = urlPng;
+        enlace.download = `${nombreArchivo}_${fechaParaInput(new Date())}.png`;
+        enlace.click();
+        window.setTimeout(() => URL.revokeObjectURL(urlPng), 1_000);
+      }, "image/png");
+    } catch (error) {
+      setGraficaExportando(null);
+      console.error("Error exportando casos por estado:", error);
+      alert("No se pudo generar el archivo PNG.");
+    }
+  };
+
+  const exportarGraficaPng = (id: string, nombreArchivo: string, titulo: string, subtitulo: string) => {
+    if (id === "grafica-estado") {
+      exportarEstadosPng(nombreArchivo);
+      return;
+    }
     const svg = document.querySelector<SVGSVGElement>(`#${id} svg`);
     if (!svg) {
       alert("No se encontró la gráfica para exportar.");
@@ -182,9 +271,10 @@ export const DashboardPage = () => {
     setGraficaExportando(id);
     imagen.onload = () => {
       const escala = 2;
+      const altoEncabezado = 96;
       const canvas = document.createElement("canvas");
       canvas.width = ancho * escala;
-      canvas.height = alto * escala;
+      canvas.height = (alto + altoEncabezado) * escala;
       const contexto = canvas.getContext("2d");
       if (!contexto) {
         URL.revokeObjectURL(urlSvg);
@@ -194,7 +284,14 @@ export const DashboardPage = () => {
       }
       contexto.fillStyle = "#ffffff";
       contexto.fillRect(0, 0, canvas.width, canvas.height);
-      contexto.drawImage(imagen, 0, 0, canvas.width, canvas.height);
+      contexto.scale(escala, escala);
+      contexto.fillStyle = "#0f172a";
+      contexto.font = "600 24px Arial, sans-serif";
+      contexto.fillText(titulo, 32, 38);
+      contexto.fillStyle = "#64748b";
+      contexto.font = "14px Arial, sans-serif";
+      contexto.fillText(subtitulo, 32, 64);
+      contexto.drawImage(imagen, 0, altoEncabezado, ancho, alto);
       canvas.toBlob((blob) => {
         URL.revokeObjectURL(urlSvg);
         setGraficaExportando(null);
@@ -218,10 +315,10 @@ export const DashboardPage = () => {
     imagen.src = urlSvg;
   };
 
-  const botonExportarGrafica = (id: string, nombre: string) => (
+  const botonExportarGrafica = (id: string, nombre: string, titulo: string, subtitulo: string) => (
     <button
       type="button"
-      onClick={() => exportarGraficaPng(id, nombre)}
+      onClick={() => exportarGraficaPng(id, nombre, titulo, subtitulo)}
       disabled={graficaExportando !== null}
       className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-wait disabled:opacity-60"
       aria-label={`Descargar gráfica ${nombre} en PNG`}
@@ -351,10 +448,10 @@ export const DashboardPage = () => {
       ) : (
         <>
           <section className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-start justify-between gap-3"><div><h2 className="font-semibold text-slate-900">Tendencia de casos</h2><p className="mb-4 text-sm text-slate-500">Solicitudes recibidas por mes · últimos seis meses</p></div>{botonExportarGrafica("grafica-tendencia", "tendencia_casos")}</div><div id="grafica-tendencia"><ResponsiveContainer width="100%" height={280}><LineChart data={tendenciaMensual} margin={{ top: 8, right: 12, left: -18, bottom: 4 }}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="mes" tickLine={false} axisLine={false} /><YAxis allowDecimals={false} tickLine={false} axisLine={false} /><Tooltip /><Line type="monotone" dataKey="casos" name="Casos" stroke="#2563eb" strokeWidth={3} dot={{ r: 4, fill: "#2563eb" }} activeDot={{ r: 6 }} /></LineChart></ResponsiveContainer></div></div>
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-start justify-between gap-3"><div><h2 className="font-semibold text-slate-900">Casos por estado</h2><p className="mb-4 text-sm text-slate-500">Distribución del resultado del filtro actual</p></div>{botonExportarGrafica("grafica-estado", "casos_por_estado")}</div><div id="grafica-estado"><ResponsiveContainer width="100%" height={280}><PieChart><Pie data={dataPorEstado} dataKey="valor" nameKey="nombre" innerRadius={62} outerRadius={96} paddingAngle={3}>{dataPorEstado.map((item) => <Cell key={item.nombre} fill={coloresEstado[item.nombre.toUpperCase()] || "#94a3b8"} />)}</Pie><Tooltip /><Legend verticalAlign="bottom" height={36} /></PieChart></ResponsiveContainer></div></div>
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-start justify-between gap-3"><div><h2 className="font-semibold text-slate-900">Casos por servicio</h2><p className="mb-4 text-sm text-slate-500">Volumen por proyecto o servicio</p></div>{botonExportarGrafica("grafica-servicio", "casos_por_servicio")}</div><div id="grafica-servicio"><ResponsiveContainer width="100%" height={280}><BarChart data={dataPorServicio} margin={{ top: 8, right: 12, left: -18, bottom: 4 }}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="nombre" tickLine={false} axisLine={false} /><YAxis allowDecimals={false} tickLine={false} axisLine={false} /><Tooltip /><Bar dataKey="valor" name="Casos" fill="#10b981" radius={[6, 6, 0, 0]} /></BarChart></ResponsiveContainer></div></div>
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-start justify-between gap-3"><div><h2 className="font-semibold text-slate-900">Sedes con más casos</h2><p className="mb-4 text-sm text-slate-500">Top 8 sedes del filtro actual</p></div>{botonExportarGrafica("grafica-sede", "casos_por_sede")}</div><div id="grafica-sede"><ResponsiveContainer width="100%" height={280}><BarChart data={dataPorSede} layout="vertical" margin={{ top: 4, right: 18, left: 12, bottom: 4 }}><CartesianGrid strokeDasharray="3 3" horizontal={false} /><XAxis type="number" allowDecimals={false} /><YAxis type="category" dataKey="nombre" width={130} tick={{ fontSize: 11 }} /><Tooltip /><Bar dataKey="valor" name="Casos" fill="#f59e0b" radius={[0, 6, 6, 0]} /></BarChart></ResponsiveContainer></div></div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-start justify-between gap-3"><div><h2 className="font-semibold text-slate-900">Tendencia de casos</h2><p className="mb-4 text-sm text-slate-500">Solicitudes recibidas por mes · últimos seis meses</p></div>{botonExportarGrafica("grafica-tendencia", "tendencia_casos", "Tendencia de casos", "Solicitudes recibidas por mes · últimos seis meses")}</div><div id="grafica-tendencia"><ResponsiveContainer width="100%" height={280}><LineChart data={tendenciaMensual} margin={{ top: 8, right: 12, left: -18, bottom: 4 }}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="mes" tickLine={false} axisLine={false} /><YAxis allowDecimals={false} tickLine={false} axisLine={false} /><Tooltip /><Line type="monotone" dataKey="casos" name="Casos" stroke="#2563eb" strokeWidth={3} dot={{ r: 4, fill: "#2563eb" }} activeDot={{ r: 6 }} /></LineChart></ResponsiveContainer></div></div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-start justify-between gap-3"><div><h2 className="font-semibold text-slate-900">Casos por estado</h2><p className="mb-4 text-sm text-slate-500">Distribución del resultado del filtro actual</p></div>{botonExportarGrafica("grafica-estado", "casos_por_estado", "Casos por estado", "Distribución del resultado del filtro actual")}</div><div id="grafica-estado"><ResponsiveContainer width="100%" height={280}><PieChart><Pie data={dataPorEstado} dataKey="valor" nameKey="nombre" innerRadius={62} outerRadius={96} paddingAngle={3}>{dataPorEstado.map((item) => <Cell key={item.nombre} fill={coloresEstado[item.nombre.toUpperCase()] || "#94a3b8"} />)}</Pie><Tooltip /><Legend verticalAlign="bottom" height={36} /></PieChart></ResponsiveContainer></div></div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-start justify-between gap-3"><div><h2 className="font-semibold text-slate-900">Casos por servicio</h2><p className="mb-4 text-sm text-slate-500">Volumen por proyecto o servicio</p></div>{botonExportarGrafica("grafica-servicio", "casos_por_servicio", "Casos por servicio", "Volumen por proyecto o servicio")}</div><div id="grafica-servicio"><ResponsiveContainer width="100%" height={280}><BarChart data={dataPorServicio} margin={{ top: 8, right: 12, left: -18, bottom: 4 }}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="nombre" tickLine={false} axisLine={false} /><YAxis allowDecimals={false} tickLine={false} axisLine={false} /><Tooltip /><Bar dataKey="valor" name="Casos" fill="#10b981" radius={[6, 6, 0, 0]} /></BarChart></ResponsiveContainer></div></div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-start justify-between gap-3"><div><h2 className="font-semibold text-slate-900">Sedes con más casos</h2><p className="mb-4 text-sm text-slate-500">Top 8 sedes del filtro actual</p></div>{botonExportarGrafica("grafica-sede", "casos_por_sede", "Sedes con más casos", "Top 8 sedes del filtro actual")}</div><div id="grafica-sede"><ResponsiveContainer width="100%" height={280}><BarChart data={dataPorSede} layout="vertical" margin={{ top: 4, right: 18, left: 12, bottom: 4 }}><CartesianGrid strokeDasharray="3 3" horizontal={false} /><XAxis type="number" allowDecimals={false} /><YAxis type="category" dataKey="nombre" width={130} tick={{ fontSize: 11 }} /><Tooltip /><Bar dataKey="valor" name="Casos" fill="#f59e0b" radius={[0, 6, 6, 0]} /></BarChart></ResponsiveContainer></div></div>
           </section>
           <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4"><div><h2 className="font-semibold text-slate-900">Casos recientes</h2><p className="text-sm text-slate-500">Últimos casos según los filtros aplicados</p></div><Link to="/casos" className="text-sm font-semibold text-blue-700 hover:text-blue-900">Ver todos</Link></div>

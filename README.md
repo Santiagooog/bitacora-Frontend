@@ -42,7 +42,7 @@ pnpm install
 pnpm dev
 ```
 
-Vite mostrará la dirección local; normalmente es `http://localhost:5173`. El cliente HTTP del frontend apunta por defecto a `http://localhost:8080/api`; para cambiarla, actualiza `baseURL` en `src/api/axios.ts`.
+Vite mostrará la dirección local; normalmente es `http://localhost:5173`. El cliente HTTP usa `VITE_API_URL` para ubicar el backend. Copia `.env.example` a `.env.local` para el desarrollo local; en el proveedor de despliegue configura la misma variable con la URL pública de la API, por ejemplo `https://api.ejemplo.com/api`.
 
 Comandos disponibles:
 
@@ -64,11 +64,16 @@ cd bitacora-backend/bitacora
 Configura las variables de entorno antes de iniciar Spring Boot. En PowerShell:
 
 ```powershell
-$env:DB_URL = "jdbc:mysql://localhost:3306/bitacora?createDatabaseIfNotExist=true&serverTimezone=UTC"
+$env:DB_URL = "jdbc:mysql://localhost:3306/bitacora_soporte?createDatabaseIfNotExist=true&serverTimezone=UTC"
 $env:DB_USERNAME = "root"
 $env:DB_PASSWORD = "<contraseña-de-MySQL>"
+$bytes = New-Object byte[] 32
+[Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes)
+$env:JWT_SECRET = [Convert]::ToBase64String($bytes)
 $env:BITACORA_INITIAL_ADMIN_PASSWORD = "<contraseña-inicial-segura>"
 ```
+
+`JWT_SECRET` debe ser una clave Base64 aleatoria de al menos 32 bytes. En IntelliJ IDEA configura estas variables en la ejecución local sin guardar sus valores en Git. El backend exige `JWT_SECRET` al arrancar; cambiarla invalida las sesiones existentes. Para una publicación, configura también `FRONTEND_URL` con el origen HTTPS exacto del frontend.
 
 Inicia la API:
 
@@ -76,7 +81,7 @@ Inicia la API:
 .\mvnw.cmd spring-boot:run
 ```
 
-La API queda disponible en `http://localhost:8080/api`. Spring Boot actualiza el esquema de MySQL al iniciar (`spring.jpa.hibernate.ddl-auto=update`). La cuenta administradora inicial se crea únicamente si aún no existe y `BITACORA_INITIAL_ADMIN_PASSWORD` tiene un valor. Su correo inicial es `admin@bitacora.com`; cambia la contraseña después del primer acceso.
+La API queda disponible en `http://localhost:8080/api`. Spring Boot actualiza el esquema de MySQL al iniciar (`spring.jpa.hibernate.ddl-auto=update`), adecuado para desarrollo y staging inicial. La cuenta administradora inicial se crea únicamente si aún no existe y `BITACORA_INITIAL_ADMIN_PASSWORD` tiene un valor. Su correo inicial es `admin@bitacora.com`; cambia la contraseña después del primer acceso.
 
 También puedes configurar las variables de entorno en la configuración de ejecución de IntelliJ IDEA. No guardes contraseñas ni tokens en el repositorio.
 
