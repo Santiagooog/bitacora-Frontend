@@ -154,16 +154,21 @@ export const DashboardPage = () => {
     const ancho = Math.max(1, Math.ceil(caja.width));
     const alto = Math.max(1, Math.ceil(caja.height));
     const grafica = svg.cloneNode(true) as SVGSVGElement;
+    const vistaOriginal = svg.getAttribute("viewBox");
     grafica.setAttribute("xmlns", "http://www.w3.org/2000/svg");
     grafica.setAttribute("width", String(ancho));
     grafica.setAttribute("height", String(alto));
-    grafica.setAttribute("viewBox", `0 0 ${ancho} ${alto}`);
+    if (vistaOriginal) {
+      grafica.setAttribute("viewBox", vistaOriginal);
+    } else {
+      grafica.setAttribute("viewBox", `0 0 ${ancho} ${alto}`);
+    }
     const nodosOriginales = [svg, ...Array.from(svg.querySelectorAll("*"))];
     const nodosClonados = [grafica, ...Array.from(grafica.querySelectorAll("*"))];
     nodosOriginales.forEach((nodo, indice) => {
       const estilo = window.getComputedStyle(nodo);
       const clon = nodosClonados[indice];
-      ["fill", "stroke", "stroke-width", "stroke-dasharray", "opacity", "font-size", "font-family", "font-weight", "text-anchor", "dominant-baseline"].forEach((propiedad) => {
+      ["fill", "fill-opacity", "stroke", "stroke-width", "stroke-opacity", "stroke-dasharray", "stroke-linecap", "stroke-linejoin", "opacity", "font-size", "font-family", "font-style", "font-weight", "letter-spacing", "text-anchor", "dominant-baseline", "visibility"].forEach((propiedad) => {
         const valor = estilo.getPropertyValue(propiedad);
         if (valor) clon?.setAttribute(propiedad, valor);
       });
