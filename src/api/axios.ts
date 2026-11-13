@@ -23,7 +23,10 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401 || error.response?.status === 403) {
+    const ruta = error.config?.url ?? "";
+    const esAutenticacion = ruta.includes("/auth/login") || ruta.includes("/auth/register");
+
+    if (!esAutenticacion && (error.response?.status === 401 || error.response?.status === 403)) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/login';
