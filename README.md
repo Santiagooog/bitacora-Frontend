@@ -1,73 +1,93 @@
-# React + TypeScript + Vite
+# Sistema de Bitácora
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Aplicación web para registrar, asignar y dar seguimiento a casos de soporte en las sedes. El proyecto está separado en dos repositorios: este frontend y una API construida con Spring Boot.
 
-Currently, two official plugins are available:
+## Repositorios
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Frontend: [bitacora-Frontend](https://github.com/Santiagooog/bitacora-Frontend)
+- Backend: [bitacora-backend](https://github.com/Santiagooog/bitacora-backend)
 
-## React Compiler
+## Funcionalidades
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- Inicio de sesión y gestión de usuarios.
+- Asignación de acceso a proyectos por usuario; los administradores tienen acceso a todos los proyectos.
+- Catálogo de servicios y proyectos administrable.
+- Gestión de casos, seguimiento de estados, escalamiento, categorías y trazabilidad.
+- Consulta de activos por sede y servicio, con carga desde archivo.
+- Configuración y visualización del ANS; el tiempo restante se muestra en horas y minutos.
+- Dashboard con filtros, gráficas y exportación a Excel. Cada gráfica puede descargarse como PNG.
+- Exportación a Excel del historial y la trazabilidad de los casos.
 
-## Expanding the ESLint configuration
+## Tecnologías
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+| Componente | Tecnologías |
+| --- | --- |
+| Frontend | React, TypeScript, Vite, Tailwind CSS, React Query, Recharts |
+| Backend | Java 17, Spring Boot, Spring Security, Spring Data JPA, Maven |
+| Base de datos | MySQL |
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Requisitos
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+- Node.js y pnpm.
+- Java 17.
+- MySQL.
+- Git.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Ejecutar el frontend
+
+Desde la carpeta de este repositorio:
+
+```bash
+pnpm install
+pnpm dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Vite mostrará la dirección local; normalmente es `http://localhost:5173`. El cliente HTTP del frontend apunta por defecto a `http://localhost:8080/api`; para cambiarla, actualiza `baseURL` en `src/api/axios.ts`.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+Comandos disponibles:
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+pnpm build   # verifica TypeScript y genera la versión de producción en dist/
+pnpm lint    # ejecuta ESLint
+pnpm preview # sirve localmente el build generado
 ```
+
+## Ejecutar el backend
+
+Clona el repositorio del backend y entra en la carpeta del proyecto Maven:
+
+```bash
+git clone https://github.com/Santiagooog/bitacora-backend.git
+cd bitacora-backend/bitacora
+```
+
+Configura las variables de entorno antes de iniciar Spring Boot. En PowerShell:
+
+```powershell
+$env:DB_URL = "jdbc:mysql://localhost:3306/bitacora?createDatabaseIfNotExist=true&serverTimezone=UTC"
+$env:DB_USERNAME = "root"
+$env:DB_PASSWORD = "<contraseña-de-MySQL>"
+$env:BITACORA_INITIAL_ADMIN_PASSWORD = "<contraseña-inicial-segura>"
+```
+
+Inicia la API:
+
+```powershell
+.\mvnw.cmd spring-boot:run
+```
+
+La API queda disponible en `http://localhost:8080/api`. Spring Boot actualiza el esquema de MySQL al iniciar (`spring.jpa.hibernate.ddl-auto=update`). La cuenta administradora inicial se crea únicamente si aún no existe y `BITACORA_INITIAL_ADMIN_PASSWORD` tiene un valor. Su correo inicial es `admin@bitacora.com`; cambia la contraseña después del primer acceso.
+
+También puedes configurar las variables de entorno en la configuración de ejecución de IntelliJ IDEA. No guardes contraseñas ni tokens en el repositorio.
+
+## Datos operativos
+
+Los archivos CSV con inventario, sedes y parámetros de ANS no están incluidos en el repositorio. Se excluyen porque contienen datos operativos de la empresa. Cárgalos desde las opciones de importación de la aplicación o mantenlos en un medio privado y autorizado. Los inicializadores del backend omiten la carga si los archivos no están disponibles.
+
+## Acceso por proyectos
+
+Al crear un usuario que no sea administrador, selecciona al menos un proyecto en la lista de permisos. El backend aplica ese alcance en las consultas de casos, dashboard, historial y exportaciones. Los usuarios ADMIN pueden consultar todos los proyectos.
+
+## Desarrollo
+
+Ejecuta frontend y backend en terminales separadas. El frontend requiere que la API esté activa y que la base de datos esté configurada. Para cambios de configuración local, usa variables de entorno o archivos locales ignorados por Git; no publiques credenciales ni datos reales de inventario.
